@@ -3,6 +3,7 @@ name: Monitor INAP cada 30 minutos
 on:
   schedule:
     - cron: "*/30 * * * *"
+    workflow_dispatch:
 
 jobs:
   check-inap:
