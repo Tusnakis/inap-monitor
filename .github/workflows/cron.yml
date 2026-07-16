@@ -19,15 +19,22 @@ jobs:
           python-version: "3.10"
 
       - name: Descargar estado previo
-        uses: actions/download-artifact@v3
+        uses: actions/download-artifact@v4
         with:
           name: inap-state
+          path: ./artifact-state
         continue-on-error: true
 
-      - name: Mostrar estado descargado
+      - name: Mover state.json si existe
         run: |
-          echo "Contenido de state.json (si existe):"
-          cat state.json || echo "No existe state.json"
+          if [ -f "./artifact-state/state.json" ]; then
+            mv ./artifact-state/state.json ./state.json
+          else
+            echo '{"hash": ""}' > state.json
+          fi
+
+      - name: Mostrar estado actual
+        run: cat state.json
 
       - name: Instalar dependencias
         run: pip install -r requirements.txt
@@ -39,7 +46,7 @@ jobs:
         run: python main.py
 
       - name: Guardar nuevo estado
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v4
         with:
           name: inap-state
           path: state.json

@@ -35,11 +35,11 @@ def compute_hash(content):
 def load_state():
     if not os.path.exists("state.json"):
         return {"hash": ""}
-    with open("state.json", "r") as f:
-        try:
+    try:
+        with open("state.json", "r") as f:
             return json.load(f)
-        except json.JSONDecodeError:
-            return {"hash": ""}
+    except:
+        return {"hash": ""}
 
 
 def save_state(state):
