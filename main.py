@@ -46,7 +46,7 @@ def get_page_hash(url):
 def run():
     print("Comprobando cambios en INAP...")
 
-    url = "https://sede.inap.gob.es/oposiciones-y-concursos"
+    url = "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2025"
     new_hash = get_page_hash(url)
 
     state = load_state()
