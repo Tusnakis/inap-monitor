@@ -11,17 +11,19 @@ jobs:
 
     steps:
       - name: Checkout del repositorio
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
 
+      # Obtener el run ID anterior
       - name: Obtener run ID anterior
         id: previous
         run: echo "run_id=$(( ${{ github.run_id }} - 1 ))" >> $GITHUB_OUTPUT
 
+      # Descargar el artifact del run anterior
       - name: Descargar estado previo
         uses: actions/download-artifact@v4
         with:
@@ -30,15 +32,18 @@ jobs:
           run-id: ${{ steps.previous.outputs.run_id }}
         continue-on-error: true
 
-      - name: Mover state.json si existe
+      # Preparar state.json
+      - name: Preparar state.json
         run: |
           if [ -f "./artifact-state/state.json" ]; then
+            echo "Usando state.json del artifact"
             mv ./artifact-state/state.json ./state.json
           else
+            echo "No existe artifact previo, creando state.json inicial"
             echo '{"hash": ""}' > state.json
           fi
 
-      - name: Mostrar estado actual
+      - name: Mostrar state.json
         run: cat state.json
 
       - name: Instalar dependencias
@@ -50,6 +55,7 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
 
+      # Subir el nuevo estado como artifact
       - name: Guardar nuevo estado
         uses: actions/upload-artifact@v4
         with:
