@@ -18,6 +18,16 @@ def save_state(state):
     with open(STATE_FILE, "w") as f:
         json.dump(state, f)
 
+def send_telegram_message(text):
+    token = os.getenv("TELEGRAM_TOKEN")
+    chat_id = os.getenv("TELEGRAM_CHAT_ID")
+
+    url = f"https://api.telegram.org/bot{token}/sendMessage"
+    payload = {"chat_id": chat_id, "text": text}
+
+    response = requests.post(url, json=payload)
+    response.raise_for_status()
+
 def get_page_hash(url):
     headers = {
         "User-Agent": (
@@ -36,7 +46,7 @@ def get_page_hash(url):
 def run():
     print("Comprobando cambios en INAP...")
 
-    url = "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2025"
+    url = "https://sede.inap.gob.es/oposiciones-y-concursos"
     new_hash = get_page_hash(url)
 
     state = load_state()
@@ -44,7 +54,7 @@ def run():
 
     if new_hash != old_hash:
         print("Nuevo contenido detectado")
-        # Aquí envías el mensaje a Telegram
+        send_telegram_message("🔔 Nuevo contenido detectado en INAP")
         save_state({"hash": new_hash})
     else:
         print("Sin cambios")
