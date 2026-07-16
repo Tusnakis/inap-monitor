@@ -1,79 +1,44 @@
-import requests
-from bs4 import BeautifulSoup
-import hashlib
-import json
 import os
-import datetime
-
-URL = "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2025"
-
-TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
-TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID")
+import json
+import hashlib
+import requests
 
 STATE_FILE = "state.json"
 
-
-def send_telegram_message(text):
-    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
-    payload = {"chat_id": TELEGRAM_CHAT_ID, "text": text}
-    requests.post(url, json=payload)
-
-
-def get_page_content():
-    response = requests.get(URL, timeout=20)
-    soup = BeautifulSoup(response.text, "html.parser")
-
-    # Extraemos solo el contenido principal
-    main_content = soup.get_text(separator="\n", strip=True)
-    return main_content
-
-
-def compute_hash(content):
-    return hashlib.sha256(content.encode("utf-8")).hexdigest()
-
-
 def load_state():
-    if not os.path.exists("state.json"):
+    if not os.path.exists(STATE_FILE):
         return {"hash": ""}
     try:
-        with open("state.json", "r") as f:
+        with open(STATE_FILE, "r") as f:
             return json.load(f)
-    except:
+    except json.JSONDecodeError:
         return {"hash": ""}
 
-
 def save_state(state):
-    with open("state.json", "w") as f:
+    with open(STATE_FILE, "w") as f:
         json.dump(state, f)
 
+def get_page_hash(url):
+    response = requests.get(url)
+    response.raise_for_status()
+    content = response.text.encode("utf-8")
+    return hashlib.sha256(content).hexdigest()
 
 def run():
     print("Comprobando cambios en INAP...")
-    content = get_page_content()
-    new_hash = compute_hash(content)
+
+    url = "https://www.inap.es/oposiciones-y-concursos"
+    new_hash = get_page_hash(url)
 
     state = load_state()
+    old_hash = state.get("hash", "")
 
-    if state is None:
-        print("No hay estado previo, guardando estado inicial.")
-        save_state(new_hash)
-        return
-
-    if new_hash != state["hash"]:
-        print("¡Nuevo contenido detectado!")
-        timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-        message = (
-            f"⚠️ Nuevo contenido detectado en INAP ({timestamp})\n\n"
-            f"URL: {URL}\n\n"
-            f"Contenido nuevo:\n\n{content[:3500]}"
-        )
-
-        send_telegram_message(message)
-        save_state(new_hash)
+    if new_hash != old_hash:
+        print("Nuevo contenido detectado")
+        # Aquí envías el mensaje a Telegram
+        save_state({"hash": new_hash})
     else:
-        print("Sin cambios.")
-
+        print("Sin cambios")
 
 if __name__ == "__main__":
     run()

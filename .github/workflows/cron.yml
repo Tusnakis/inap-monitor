@@ -12,39 +12,13 @@ jobs:
     steps:
       - name: Checkout del repositorio
         uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PERSONAL_TOKEN }}
 
       - name: Configurar Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.10"
-
-      # Obtener el run ID anterior
-      - name: Obtener run ID anterior
-        id: previous
-        run: echo "run_id=$(( ${{ github.run_id }} - 1 ))" >> $GITHUB_OUTPUT
-
-      # Descargar el artifact del run anterior
-      - name: Descargar estado previo
-        uses: actions/download-artifact@v4
-        with:
-          name: inap-state
-          path: ./artifact-state
-          run-id: ${{ steps.previous.outputs.run_id }}
-        continue-on-error: true
-
-      # Preparar state.json
-      - name: Preparar state.json
-        run: |
-          if [ -f "./artifact-state/state.json" ]; then
-            echo "Usando state.json del artifact"
-            mv ./artifact-state/state.json ./state.json
-          else
-            echo "No existe artifact previo, creando state.json inicial"
-            echo '{"hash": ""}' > state.json
-          fi
-
-      - name: Mostrar state.json
-        run: cat state.json
 
       - name: Instalar dependencias
         run: pip install -r requirements.txt
@@ -55,9 +29,15 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
         run: python main.py
 
-      # Subir el nuevo estado como artifact
-      - name: Guardar nuevo estado
-        uses: actions/upload-artifact@v4
-        with:
-          name: inap-state
-          path: state.json
+      - name: Commit del nuevo estado si ha cambiado
+        run: |
+          if git diff --quiet state.json; then
+            echo "No hay cambios en state.json, no se hace commit."
+          else
+            echo "Hay cambios en state.json, haciendo commit..."
+            git config user.name "github-actions"
+            git config user.email "github-actions@github.com"
+            git add state.json
+            git commit -m "Actualizar estado INAP"
+            git push
+          fi
