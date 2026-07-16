@@ -2,6 +2,7 @@ import os
 import json
 import hashlib
 import requests
+from bs4 import BeautifulSoup
 
 STATE_FILE = "state.json"
 
@@ -28,7 +29,7 @@ def send_telegram_message(text):
     response = requests.post(url, json=payload)
     response.raise_for_status()
 
-def get_page_hash(url):
+def get_relevant_hash(url):
     headers = {
         "User-Agent": (
             "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
@@ -37,24 +38,32 @@ def get_page_hash(url):
         )
     }
 
-    response = requests.get(url, headers=headers)
-    response.raise_for_status()
+    html = requests.get(url, headers=headers).text
+    soup = BeautifulSoup(html, "html.parser")
 
-    content = response.text.encode("utf-8")
-    return hashlib.sha256(content).hexdigest()
+    # EXTRAER SOLO EL CONTENIDO DE LA CLASE inap__content (incluye todos sus hijos)
+    target = soup.find(class_="inap__content")
+
+    if target is None:
+        content = ""
+    else:
+        # get_text() ya incluye todos los hijos
+        content = target.get_text(separator=" ", strip=True)
+
+    return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 def run():
     print("Comprobando cambios en INAP...")
 
     url = "https://sede.inap.gob.es/es/procedimientos-y-servicios/seleccion/procesos-selectivos-de-cuerpos-y-escalas-generales/cuerpo-de-tecnicos-auxiliares-de-informatica-de-la-administracion-del-estado-ingreso-libre-convocatoria-2025"
-    new_hash = get_page_hash(url)
+    new_hash = get_relevant_hash(url)
 
     state = load_state()
     old_hash = state.get("hash", "")
 
     if new_hash != old_hash:
         print("Nuevo contenido detectado")
-        send_telegram_message("🔔 Nuevo contenido detectado en INAP")
+        send_telegram_message("🔔 Nuevo contenido detectado en INAP (TAI 2025)")
         save_state({"hash": new_hash})
     else:
         print("Sin cambios")
