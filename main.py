@@ -41,15 +41,25 @@ def get_relevant_hash(url):
     html = requests.get(url, headers=headers).text
     soup = BeautifulSoup(html, "html.parser")
 
-    # EXTRAER SOLO EL CONTENIDO DE LA CLASE inap__content (incluye todos sus hijos)
-    target = soup.find(class_="inap__content")
+     # 1. Encontrar TODOS los h3 cuyo texto sea EXACTAMENTE "Ejercicio único"
+    h3s = [h for h in soup.find_all("h3") if h.get_text(strip=True) == "Ejercicio único"]
 
-    if target is None:
-        content = ""
-    else:
-        # get_text() ya incluye todos los hijos
-        content = target.get_text(separator=" ", strip=True)
+    if len(h3s) < 2:
+        raise Exception("No existe un segundo h3 con el texto 'Ejercicio único'")
 
+    segundo_h3 = h3s[1]
+
+    # 2. Encontrar la lista inmediatamente después del segundo h3
+    #    (puede ser ul, ol, div con items, etc.)
+    lista = segundo_h3.find_next(["ul", "ol"])
+
+    if lista is None:
+        raise Exception("El segundo h3 no tiene una lista después")
+
+    # 3. Extraer el texto de todos los nodos de la lista
+    content = lista.get_text(separator=" ", strip=True)
+
+    # 4. Calcular hash
     return hashlib.sha256(content.encode("utf-8")).hexdigest()
 
 def run():
